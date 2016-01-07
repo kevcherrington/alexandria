@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.UnknownHostException;
 
 import it.jaschke.alexandria.MainActivity;
 import it.jaschke.alexandria.R;
@@ -128,6 +129,13 @@ public class BookService extends IntentService {
                 return;
             }
             bookJsonString = buffer.toString();
+        } catch (UnknownHostException uhe) {
+            Log.d(LOG_TAG, "fetchBook: no network connection =`(");
+
+            Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
+            messageIntent.putExtra(MainActivity.MESSAGE_KEY,getResources().getString(R.string.no_internet_connection));
+            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+            return;
         } catch (Exception e) {
             Log.e(LOG_TAG, "Error ", e);
         } finally {
@@ -157,11 +165,16 @@ public class BookService extends IntentService {
         final String IMG_URL = "thumbnail";
 
         try {
-            JSONObject bookJson = new JSONObject(bookJsonString);
+            JSONObject bookJson = bookJsonString != null ? new JSONObject(bookJsonString) : null;
             JSONArray bookArray;
-            if(bookJson.has(ITEMS)){
+            if(bookJson != null && bookJson.has(ITEMS)){
                 bookArray = bookJson.getJSONArray(ITEMS);
-            }else{
+            } else if (bookJson == null) {
+                Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
+                messageIntent.putExtra(MainActivity.MESSAGE_KEY,getResources().getString(R.string.no_internet_connection));
+                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+                return;
+            } else {
                 Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
                 messageIntent.putExtra(MainActivity.MESSAGE_KEY,getResources().getString(R.string.not_found));
                 LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
